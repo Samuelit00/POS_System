@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from .. import schemas, crud
 from ..database import get_db
-
+from app.crud import products
 router = APIRouter(prefix='/productos', tags=['productos'])
 
 @router.post('/', response_model=schemas.ProductoOut)

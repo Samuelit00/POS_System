@@ -12,6 +12,9 @@ app = FastAPI(title="POS System",
     version="1.0.0")
 
 # Create tables in development automatically
+
+
+
 Base.metadata.create_all(bind=engine)
 
 app.include_router(users.router)

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import schemas, crud
 from ..database import get_db
-
+from app.crud import sales
 router = APIRouter(prefix='/ventas', tags=['ventas'])
 
 @router.post('/', response_model=schemas.VentaOut)

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from .. import schemas, crud, models
 from ..database import get_db
-
+from app.crud import users
 router = APIRouter(prefix='/usuarios', tags=['usuarios'])
 
 @router.post('/', response_model=schemas.UsuarioOut)
