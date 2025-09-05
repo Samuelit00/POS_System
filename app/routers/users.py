@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from .. import schemas, crud, models
 from ..database import get_db
 from app.crud import users
+from ..utils.security import verify_password  
+from ..utils.jwt import create_access_token
 router = APIRouter(prefix='/usuarios', tags=['usuarios'])
 
 @router.post('/', response_model=schemas.UsuarioOut)
@@ -24,3 +26,19 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     if not u:
         raise HTTPException(status_code=404, detail='Usuario no encontrado')
     return u
+
+@router.post('/login')  
+def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):  
+    # Get user by email  
+    user = crud.users.get_user_by_email(db, credentials.email)  
+    if not user:  
+        raise HTTPException(status_code=401, detail='Invalid credentials')  
+      
+    # Verify password  
+    if not verify_password(credentials.password, user.password_hash):  
+        raise HTTPException(status_code=401, detail='Invalid credentials')  
+      
+    # Create access token  
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})  
+      
+    return {"access_token": access_token, "token_type": "bearer"}
