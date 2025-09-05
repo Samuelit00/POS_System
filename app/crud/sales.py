@@ -29,3 +29,13 @@ def create_sale(db: Session, sale: schemas.VentaCreate):
     db.commit()
     db.refresh(db_sale)
     return db_sale
+
+def get_sale(db: Session, sale_id: int):  
+    return db.query(models.Venta).filter(models.Venta.id == sale_id).first()  
+  
+def delete_sale(db: Session, sale_id: int):  
+    sale = db.query(models.Venta).filter(models.Venta.id == sale_id).first()  
+    if sale:  
+        db.delete(sale)  
+        db.commit()  
+    return sale

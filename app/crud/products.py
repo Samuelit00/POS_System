@@ -22,3 +22,10 @@ def update_stock(db: Session, product_id: int, delta: int):
     db.commit()
     db.refresh(prod)
     return prod
+
+def delete_product(db: Session, product_id: int):  
+    product = db.query(models.Producto).filter(models.Producto.id == product_id).first()  
+    if product:  
+        db.delete(product)  
+        db.commit()  
+    return product

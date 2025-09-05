@@ -42,3 +42,10 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})  
       
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.delete('/{user_id}', status_code=204)  
+def delete_user(user_id: int, db: Session = Depends(get_db)):  
+    user = crud.users.get_user(db, user_id)  
+    if not user:  
+        raise HTTPException(status_code=404, detail='Usuario no encontrado')  
+    crud.users.delete_user(db, user_id)

@@ -21,3 +21,10 @@ def get_user(db: Session, user_id: int):
 
 def list_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Usuario).offset(skip).limit(limit).all()
+
+def delete_user(db: Session, user_id: int):  
+    user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()  
+    if user:  
+        db.delete(user)  
+        db.commit()  
+    return user
