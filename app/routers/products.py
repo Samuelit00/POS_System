@@ -20,3 +20,10 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     if not prod:
         raise HTTPException(status_code=404, detail='Producto no encontrado')
     return prod
+
+@router.delete('/{product_id}', status_code=204)  
+def delete_product(product_id: int, db: Session = Depends(get_db)):  
+    product = crud.products.get_product(db, product_id)  
+    if not product:  
+        raise HTTPException(status_code=404, detail='Producto no encontrado')  
+    crud.products.delete_product(db, product_id)
