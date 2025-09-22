@@ -23,6 +23,19 @@ def update_stock(db: Session, product_id: int, delta: int):
     db.refresh(prod)
     return prod
 
+def update_product(db: Session, product_id: int, product: schemas.ProductoUpdate):
+    db_product = db.query(models.Producto).filter(models.Producto.id == product_id).first()
+    if not db_product:
+        return None
+    
+    update_data = product.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_product, field, value)
+    
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
 def delete_product(db: Session, product_id: int):  
     product = db.query(models.Producto).filter(models.Producto.id == product_id).first()  
     if product:  

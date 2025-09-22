@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}POS XYZ System{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/styles.css') }}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <h3><i class="fas fa-cash-register me-2"></i>POS XYZ</h3>
+        </div>
+        
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-tachometer-alt"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pos">
+                    <i class="fas fa-shopping-cart"></i>Punto de Venta
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/productos">
+                    <i class="fas fa-box"></i>Productos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/inventario">
+                    <i class="fas fa-warehouse"></i>Inventario
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/ventas">
+                    <i class="fas fa-file-invoice-dollar"></i>Ventas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/usuarios">
+                    <i class="fas fa-users"></i>Usuarios
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/reportes">
+                    <i class="fas fa-chart-bar"></i>Reportes
+                </a>
+            </li>
+            <li class="nav-item mt-auto">
+                <a class="nav-link logout-btn" href="#" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i>Cerrar Sesión
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <div>
+                    <h4 class="mb-0">{% block page_title %}Dashboard{% endblock %}</h4>
+                    <small class="text-muted">Bienvenido al sistema POS XYZ</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-3">
+                        <i class="fas fa-user-circle me-2"></i>
+                        <span class="user-email">usuario@example.com</span>
+                    </span>
+                    <button class="btn btn-outline-danger btn-sm logout-btn" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt me-1"></i>Salir
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="container-fluid">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', path='/js/utils.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/api.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/auth.js') }}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

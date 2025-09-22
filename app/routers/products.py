@@ -21,6 +21,20 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail='Producto no encontrado')
     return prod
 
+@router.put('/{product_id}', response_model=schemas.ProductoOut)
+def update_product(product_id: int, product: schemas.ProductoUpdate, db: Session = Depends(get_db)):
+    existing_product = crud.products.get_product(db, product_id)
+    if not existing_product:
+        raise HTTPException(status_code=404, detail='Producto no encontrado')
+    return crud.products.update_product(db, product_id, product)
+
+@router.patch('/{product_id}', response_model=schemas.ProductoOut)
+def patch_product(product_id: int, product: schemas.ProductoUpdate, db: Session = Depends(get_db)):
+    existing_product = crud.products.get_product(db, product_id)
+    if not existing_product:
+        raise HTTPException(status_code=404, detail='Producto no encontrado')
+    return crud.products.update_product(db, product_id, product)
+
 @router.delete('/{product_id}', status_code=204)  
 def delete_product(product_id: int, db: Session = Depends(get_db)):  
     product = crud.products.get_product(db, product_id)  

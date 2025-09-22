@@ -7,7 +7,7 @@ from app.utils.security import hash_password
 def create_admin():
     db = SessionLocal()
     try:
-        email = 'admin@pos.local'
+        email = 'admin@example.com'
         existing = db.query(models.Usuario).filter(models.Usuario.email == email).first()
         if existing:
             print('Admin ya existe:', email)

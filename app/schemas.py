@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, conint, condecimal
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
+from decimal import Decimal
 
 """
 El objetivo de los esquemas es de definir la estructura de los 
@@ -22,13 +23,19 @@ class UsuarioOut(BaseModel):
     rol: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    rol: Optional[str] = None
 
 class ProductoCreate(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
-    precio: condecimal(max_digits=12, decimal_places=2)
-    stock: conint(ge=0)
+    precio: float = Field(..., gt=0, description="Precio debe ser mayor a 0")
+    stock: int = Field(..., ge=0, description="Stock debe ser mayor o igual a 0")
 
 class ProductoOut(BaseModel):
     id: int
@@ -38,15 +45,15 @@ class ProductoOut(BaseModel):
     stock: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DetalleVentaItem(BaseModel):
     producto_id: int
-    cantidad: conint(gt=0)
+    cantidad: int = Field(..., gt=0, description="Cantidad debe ser mayor a 0")
 
 class VentaCreate(BaseModel):
-    usuario_id: int
-    productos: List[DetalleVentaItem]
+    metodo_pago: str
+    detalles: List[dict]  # Will contain producto_id, cantidad, precio_unitario
 
 class VentaOut(BaseModel):
     id: int
@@ -54,8 +61,47 @@ class VentaOut(BaseModel):
     total: float
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class LoginRequest(BaseModel):  
     email: EmailStr  
     password: str
+
+class ProductoUpdate(BaseModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    precio: Optional[float] = None
+    stock: Optional[int] = None
+
+class DetalleVentaOut(BaseModel):
+    producto_id: int
+    producto_nombre: str
+    cantidad: int
+    precio_unitario: float
+    subtotal: float
+
+    class Config:
+        from_attributes = True
+
+class VentaDetailOut(BaseModel):
+    id: int
+    usuario_id: int
+    usuario_nombre: str
+    fecha_creacion: str
+    total: float
+    detalles: List[DetalleVentaOut]
+
+    class Config:
+        from_attributes = True
+
+class ProductoTop(BaseModel):
+    nombre: str
+    cantidad: int
+    total: float
+
+class DashboardMetrics(BaseModel):
+    total_ventas_hoy: float
+    ventas_count_hoy: int
+    productos_bajo_stock: int
+    usuarios_activos: int
+    productos_top: List[ProductoTop] = []

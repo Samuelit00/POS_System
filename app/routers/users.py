@@ -27,6 +27,13 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail='Usuario no encontrado')
     return u
 
+@router.put('/{user_id}', response_model=schemas.UsuarioOut)
+def update_user(user_id: int, user: schemas.UsuarioUpdate, db: Session = Depends(get_db)):
+    existing_user = crud.users.get_user(db, user_id)
+    if not existing_user:
+        raise HTTPException(status_code=404, detail='Usuario no encontrado')
+    return crud.users.update_user(db, user_id, user)
+
 @router.post('/login')  
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):  
     # Get user by email  
@@ -41,7 +48,16 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     # Create access token  
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})  
       
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "nombre": user.nombre,
+            "email": user.email,
+            "rol": user.rol
+        }
+    }
 
 @router.delete('/{user_id}', status_code=204)  
 def delete_user(user_id: int, db: Session = Depends(get_db)):  

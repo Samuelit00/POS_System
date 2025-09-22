@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - POS XYZ System{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Metrics Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="text-muted text-uppercase mb-1">Ventas Hoy</h5>
+                        <div class="h2 mb-0 font-weight-bold text-primary" id="ventasHoy">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-shopping-cart fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card success">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="text-muted text-uppercase mb-1">Ingresos Hoy</h5>
+                        <div class="h2 mb-0 font-weight-bold text-success" id="ingresosHoy">$0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card warning">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="text-muted text-uppercase mb-1">Stock Bajo</h5>
+                        <div class="h2 mb-0 font-weight-bold text-warning" id="stockBajo">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card info">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="text-muted text-uppercase mb-1">Usuarios Activos</h5>
+                        <div class="h2 mb-0 font-weight-bold text-info" id="usuariosActivos">0</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row">
+    <!-- Sales Chart -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Ventas de los Últimos 7 Días
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salesChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Products -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-trophy me-2"></i>Productos Más Vendidos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="topProducts">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Ventas Recientes
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Vendedor</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentSales">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Cargando ventas...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Acciones Rápidas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/pos" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>Nueva Venta
+                    </a>
+                    <a href="/productos" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Agregar Producto
+                    </a>
+                    <a href="/inventario" class="btn btn-warning">
+                        <i class="fas fa-warehouse me-2"></i>Ver Inventario
+                    </a>
+                    <a href="/reportes" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-2"></i>Generar Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let salesChart;
+let dashboardData = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadDashboardData();
+});
+
+async function loadDashboardData() {
+    try {
+        // Load metrics
+        const metrics = await api.getDashboardMetrics();
+        updateMetricsCards(metrics);
+        
+        // Load sales for chart
+        const sales = await api.getSales();
+        createSalesChart(sales);
+        
+        // Load top products from metrics
+        updateTopProducts(metrics);
+        
+        // Load recent sales
+        updateRecentSales(sales.slice(0, 5));
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showAlert('Error cargando datos del dashboard', 'danger');
+    }
+}
+
+function updateMetricsCards(metrics) {
+    document.getElementById('ventasHoy').textContent = metrics.ventas_count_hoy;
+    document.getElementById('ingresosHoy').textContent = formatCurrency(metrics.total_ventas_hoy);
+    document.getElementById('stockBajo').textContent = metrics.productos_bajo_stock;
+    document.getElementById('usuariosActivos').textContent = metrics.usuarios_activos;
+}
+
+function createSalesChart(salesData) {
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    // Generate last 7 days data
+    const last7Days = [];
+    const salesByDay = {};
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        last7Days.push(dateStr);
+        salesByDay[dateStr] = 0;
+    }
+    
+    // Count sales by day
+    salesData.forEach(sale => {
+        const saleDate = new Date(sale.fecha_creacion).toISOString().split('T')[0];
+        if (salesByDay.hasOwnProperty(saleDate)) {
+            salesByDay[saleDate] += parseFloat(sale.total);
+        }
+    });
+    
+    const chartData = last7Days.map(date => salesByDay[date]);
+    const chartLabels = last7Days.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
+    });
+    
+    if (salesChart) {
+        salesChart.destroy();
+    }
+    
+    salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Ventas',
+                data: chartData,
+                borderColor: '#0066cc',
+                backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateTopProducts(dashboardData) {
+    const topProducts = dashboardData.productos_top || [];
+    
+    const container = document.getElementById('topProducts');
+    if (topProducts.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">No hay datos de productos</div>';
+        return;
+    }
+    
+    container.innerHTML = topProducts.slice(0, 5).map((product, index) => `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <span class="badge bg-primary me-2">#${index + 1}</span>
+                ${product.nombre}
+            </div>
+            <span class="badge bg-success">${product.cantidad}</span>
+        </div>
+    `).join('');
+}
+
+function updateRecentSales(salesData) {
+    const tbody = document.getElementById('recentSales');
+    
+    if (salesData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay ventas recientes</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = salesData.map(sale => `
+        <tr>
+            <td>#${sale.id}</td>
+            <td>${formatShortDate(sale.fecha_creacion)}</td>
+            <td>${sale.usuario?.nombre || 'N/A'}</td>
+            <td class="text-success">${formatCurrency(sale.total)}</td>
+            <td><span class="badge bg-success">Completada</span></td>
+        </tr>
+    `).join('');
+}
+</script>
+{% endblock %}

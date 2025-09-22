@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes y Estadísticas - POS XYZ System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">
+                <i class="fas fa-chart-bar me-2"></i>Reportes y Estadísticas
+            </h1>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="refreshReports()">
+                    <i class="fas fa-sync me-2"></i>Actualizar
+                </button>
+                <button class="btn btn-outline-success" onclick="exportReport()">
+                    <i class="fas fa-download me-2"></i>Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 id="totalVentas">0</h4>
+                        <p class="mb-0">Ventas Totales</p>
+                    </div>
+                    <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 id="ingresosTotales">$0</h4>
+                        <p class="mb-0">Ingresos Totales</p>
+                    </div>
+                    <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 id="promedioVenta">$0</h4>
+                        <p class="mb-0">Promedio por Venta</p>
+                    </div>
+                    <i class="fas fa-calculator fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 id="productosVendidos">0</h4>
+                        <p class="mb-0">Productos Vendidos</p>
+                    </div>
+                    <i class="fas fa-box fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Products Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-trophy me-2"></i>Top 10 Productos Más Vendidos
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="topProductsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sales by Vendor -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>Ventas por Vendedor
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salesByVendorChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Product Performance Table -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Rendimiento de Productos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Vendido</th>
+                                <th>Ingresos</th>
+                                <th>Stock Actual</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productPerformanceTable">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Low Stock Alert -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Alertas de Stock
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="stockAlerts">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Cargando alertas...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let topProductsChart;
+let salesByVendorChart;
+let reportData = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadReportData();
+});
+
+async function loadReportData() {
+    try {
+        // Load metrics and sales data
+        const [metrics, sales, products] = await Promise.all([
+            api.getDashboardMetrics(),
+            api.getSales(),
+            api.getProducts()
+        ]);
+        
+        reportData = { metrics, sales, products };
+        
+        updateSummaryCards();
+        createCharts();
+        updateProductPerformanceTable();
+        updateStockAlerts();
+        
+    } catch (error) {
+        console.error('Error loading report data:', error);
+        showAlert('Error cargando datos del reporte', 'danger');
+    }
+}
+
+function updateSummaryCards() {
+    const { metrics, sales } = reportData;
+    
+    // Calculate totals from all sales
+    const totalVentas = sales.length;
+    const ingresosTotales = sales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
+    const promedioVenta = totalVentas > 0 ? ingresosTotales / totalVentas : 0;
+    const productosVendidos = sales.reduce((sum, sale) => 
+        sum + (sale.items ? sale.items.reduce((itemSum, item) => itemSum + item.cantidad, 0) : 0), 0);
+    
+    document.getElementById('totalVentas').textContent = totalVentas;
+    document.getElementById('ingresosTotales').textContent = formatCurrency(ingresosTotales);
+    document.getElementById('promedioVenta').textContent = formatCurrency(promedioVenta);
+    document.getElementById('productosVendidos').textContent = productosVendidos;
+}
+
+function createCharts() {
+    createTopProductsChart();
+    createSalesByVendorChart();
+}
+
+function createTopProductsChart() {
+    const ctx = document.getElementById('topProductsChart').getContext('2d');
+    
+    if (topProductsChart) {
+        topProductsChart.destroy();
+    }
+    
+    const { metrics } = reportData;
+    const productos = (metrics.productos_top || []).slice(0, 10);
+    
+    topProductsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: productos.map(p => p.nombre),
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: productos.map(p => p.cantidad),
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function createSalesByVendorChart() {
+    const ctx = document.getElementById('salesByVendorChart').getContext('2d');
+    
+    if (salesByVendorChart) {
+        salesByVendorChart.destroy();
+    }
+    
+    const { sales } = reportData;
+    
+    // Group sales by vendor
+    const salesByVendor = {};
+    sales.forEach(sale => {
+        const vendorName = sale.usuario.nombre;
+        if (!salesByVendor[vendorName]) {
+            salesByVendor[vendorName] = 0;
+        }
+        salesByVendor[vendorName] += parseFloat(sale.total);
+    });
+    
+    const labels = Object.keys(salesByVendor);
+    const data = Object.values(salesByVendor);
+    
+    salesByVendorChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function updateProductPerformanceTable() {
+    const { sales, products } = reportData;
+    const tbody = document.getElementById('productPerformanceTable');
+    
+    // Calculate product performance
+    const productStats = {};
+    
+    // Initialize with all products
+    products.forEach(product => {
+        productStats[product.id] = {
+            nombre: product.nombre,
+            cantidadVendida: 0,
+            ingresos: 0,
+            stockActual: product.stock
+        };
+    });
+    
+    // Add sales data
+    sales.forEach(sale => {
+        if (sale.items) {
+            sale.items.forEach(item => {
+                if (productStats[item.producto_id]) {
+                    productStats[item.producto_id].cantidadVendida += item.cantidad;
+                    productStats[item.producto_id].ingresos += parseFloat(item.subtotal);
+                }
+            });
+        }
+    });
+    
+    // Convert to array and sort by revenue
+    const performanceArray = Object.values(productStats)
+        .sort((a, b) => b.ingresos - a.ingresos)
+        .slice(0, 15); // Top 15
+    
+    tbody.innerHTML = performanceArray.map(stats => `
+        <tr>
+            <td><strong>${stats.nombre}</strong></td>
+            <td><span class="badge bg-primary">${stats.cantidadVendida}</span></td>
+            <td class="text-success"><strong>${formatCurrency(stats.ingresos)}</strong></td>
+            <td>
+                <span class="badge ${stats.stockActual === 0 ? 'bg-danger' : stats.stockActual < 10 ? 'bg-warning text-dark' : 'bg-success'}">
+                    ${stats.stockActual}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateStockAlerts() {
+    const { products } = reportData;
+    const container = document.getElementById('stockAlerts');
+    
+    const lowStockProducts = products.filter(p => p.stock < 10);
+    const outOfStockProducts = products.filter(p => p.stock === 0);
+    
+    if (lowStockProducts.length === 0 && outOfStockProducts.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-success">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <p class="mb-0">¡Todo el inventario está en buen estado!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let alertsHTML = '';
+    
+    if (outOfStockProducts.length > 0) {
+        alertsHTML += `
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-times-circle me-2"></i>Sin Stock (${outOfStockProducts.length})</h6>
+                <ul class="mb-0">
+                    ${outOfStockProducts.slice(0, 5).map(p => `<li>${p.nombre}</li>`).join('')}
+                    ${outOfStockProducts.length > 5 ? `<li><em>+${outOfStockProducts.length - 5} más...</em></li>` : ''}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (lowStockProducts.length > 0) {
+        alertsHTML += `
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Stock Bajo (${lowStockProducts.length})</h6>
+                <ul class="mb-0">
+                    ${lowStockProducts.slice(0, 5).map(p => `<li>${p.nombre} (${p.stock})</li>`).join('')}
+                    ${lowStockProducts.length > 5 ? `<li><em>+${lowStockProducts.length - 5} más...</em></li>` : ''}
+                </ul>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = alertsHTML;
+}
+
+async function refreshReports() {
+    showAlert('Actualizando reportes...', 'info', 2000);
+    await loadReportData();
+    showAlert('Reportes actualizados', 'success', 2000);
+}
+
+function exportReport() {
+    // Simple CSV export functionality
+    const { sales, products } = reportData;
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "ID Venta,Fecha,Vendedor,Total,Productos\n";
+    
+    sales.forEach(sale => {
+        const itemCount = sale.items ? sale.items.length : 0;
+        csvContent += `${sale.id},${formatShortDate(sale.fecha)},${sale.usuario.nombre},${sale.total},${itemCount}\n`;
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('Reporte exportado correctamente', 'success');
+}
+
+// Fix for Chart.js horizontalBar (use 'bar' with indexAxis: 'y')
+Chart.register(Chart.controllers.bar);
+</script>
+{% endblock %}

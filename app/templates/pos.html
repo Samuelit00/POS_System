@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Punto de Venta - POS XYZ System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>Productos
+                    </h5>
+                    <div class="search-container" style="width: 300px;">
+                        <input type="text" class="form-control" id="productSearch" placeholder="Buscar productos...">
+                        <i class="fas fa-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="row" id="productsGrid">
+                    <div class="col-12 text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Cargando productos...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Shopping Cart -->
+    <div class="col-lg-4">
+        <div class="card pos-cart">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shopping-basket me-2"></i>Carrito de Compras
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="cartItems">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                        <p>El carrito está vacío</p>
+                        <small>Agrega productos para comenzar una venta</small>
+                    </div>
+                </div>
+                
+                <hr id="cartDivider" style="display: none;">
+                
+                <!-- Cart Summary -->
+                <div id="cartSummary" style="display: none;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="cartSubtotal">$0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total:</strong>
+                        <strong id="cartTotal">$0</strong>
+                    </div>
+                    
+                    <!-- Customer Info -->
+                    <div class="mb-3">
+                        <label for="customerName" class="form-label">Cliente (Opcional):</label>
+                        <input type="text" class="form-control" id="customerName" placeholder="Nombre del cliente">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-lg" id="processScanner" onclick="processSale()">
+                            <i class="fas fa-credit-card me-2"></i>Procesar Venta
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="clearCart()">
+                            <i class="fas fa-trash me-2"></i>Limpiar Carrito
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sale Success Modal -->
+<div class="modal fade" id="saleSuccessModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>¡Venta Exitosa!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                    <h4>Venta #<span id="saleId"></span></h4>
+                    <p class="text-muted">Total: <span id="saleTotal" class="text-success fw-bold"></span></p>
+                </div>
+                
+                <div id="saleReceiptContent">
+                    <!-- Receipt content will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" onclick="printReceipt()">
+                    <i class="fas fa-print me-2"></i>Imprimir Recibo
+                </button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="startNewSale()">
+                    <i class="fas fa-plus me-2"></i>Nueva Venta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let products = [];
+let cart = [];
+let saleSuccessModal;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    saleSuccessModal = new bootstrap.Modal(document.getElementById('saleSuccessModal'));
+    await loadProducts();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    const searchInput = document.getElementById('productSearch');
+    const debouncedSearch = debounce(() => {
+        filterProducts();
+    }, 300);
+    
+    searchInput.addEventListener('input', debouncedSearch);
+}
+
+async function loadProducts() {
+    try {
+        products = await api.getProducts();
+        filterProducts();
+    } catch (error) {
+        console.error('Error loading products:', error);
+        showAlert('Error cargando productos', 'danger');
+        document.getElementById('productsGrid').innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-danger">Error cargando productos</div>
+            </div>
+        `;
+    }
+}
+
+function filterProducts() {
+    const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+    
+    const filteredProducts = products.filter(product => 
+        product.stock > 0 && (
+            product.nombre.toLowerCase().includes(searchTerm) ||
+            (product.descripcion && product.descripcion.toLowerCase().includes(searchTerm))
+        )
+    );
+    
+    renderProducts(filteredProducts);
+}
+
+function renderProducts(productsToRender) {
+    const grid = document.getElementById('productsGrid');
+    
+    if (productsToRender.length === 0) {
+        grid.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No hay productos disponibles con stock
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = productsToRender.map(product => `
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card pos-product h-100" onclick="addToCart(${product.id})">
+                <div class="card-body">
+                    <h6 class="card-title">${product.nombre}</h6>
+                    <p class="card-text text-muted small">${product.descripcion || 'Sin descripción'}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h5 text-success mb-0">${formatCurrency(product.precio)}</span>
+                        <small class="text-muted">Stock: ${product.stock}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addToCart(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product || product.stock <= 0) {
+        showAlert('Producto no disponible', 'warning');
+        return;
+    }
+    
+    const cartItem = cart.find(item => item.producto_id === productId);
+    
+    if (cartItem) {
+        if (cartItem.cantidad >= product.stock) {
+            showAlert('No hay suficiente stock disponible', 'warning');
+            return;
+        }
+        cartItem.cantidad++;
+    } else {
+        cart.push({
+            producto_id: productId,
+            producto: product,
+            cantidad: 1,
+            precio_unitario: parseFloat(product.precio)
+        });
+    }
+    
+    updateCartDisplay();
+    showAlert(`${product.nombre} agregado al carrito`, 'success', 2000);
+}
+
+function removeFromCart(productId) {
+    cart = cart.filter(item => item.producto_id !== productId);
+    updateCartDisplay();
+}
+
+function updateQuantity(productId, newQuantity) {
+    const cartItem = cart.find(item => item.producto_id === productId);
+    const product = products.find(p => p.id === productId);
+    
+    if (cartItem && product) {
+        if (newQuantity <= 0) {
+            removeFromCart(productId);
+        } else if (newQuantity <= product.stock) {
+            cartItem.cantidad = newQuantity;
+            updateCartDisplay();
+        } else {
+            showAlert('Cantidad excede el stock disponible', 'warning');
+        }
+    }
+}
+
+function updateCartDisplay() {
+    const cartItemsContainer = document.getElementById('cartItems');
+    const cartSummary = document.getElementById('cartSummary');
+    const cartDivider = document.getElementById('cartDivider');
+    
+    if (cart.length === 0) {
+        cartItemsContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                <p>El carrito está vacío</p>
+                <small>Agrega productos para comenzar una venta</small>
+            </div>
+        `;
+        cartSummary.style.display = 'none';
+        cartDivider.style.display = 'none';
+        return;
+    }
+    
+    // Calculate totals
+    let subtotal = 0;
+    
+    cartItemsContainer.innerHTML = cart.map(item => {
+        const itemTotal = item.precio_unitario * item.cantidad;
+        subtotal += itemTotal;
+        
+        return `
+            <div class="cart-item mb-3 p-2 border rounded">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-1">${item.producto.nombre}</h6>
+                    <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart(${item.producto_id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="input-group" style="width: 100px;">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="updateQuantity(${item.producto_id}, ${item.cantidad - 1})">-</button>
+                        <input type="number" class="form-control form-control-sm text-center" value="${item.cantidad}" 
+                               onchange="updateQuantity(${item.producto_id}, parseInt(this.value))" min="1" max="${item.producto.stock}">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="updateQuantity(${item.producto_id}, ${item.cantidad + 1})">+</button>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">${formatCurrency(item.precio_unitario)} c/u</small>
+                        <strong>${formatCurrency(itemTotal)}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Update summary
+    document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('cartTotal').textContent = formatCurrency(subtotal);
+    
+    cartSummary.style.display = 'block';
+    cartDivider.style.display = 'block';
+}
+
+function clearCart() {
+    if (cart.length === 0) return;
+    
+    if (confirm('¿Estás seguro de que deseas limpiar el carrito?')) {
+        cart = [];
+        updateCartDisplay();
+        showAlert('Carrito limpiado', 'info');
+    }
+}
+
+async function processSale() {
+    if (cart.length === 0) {
+        showAlert('El carrito está vacío', 'warning');
+        return;
+    }
+    
+    if (!currentUser) {
+        showAlert('Error de autenticación', 'danger');
+        return;
+    }
+    
+    const processBtn = document.getElementById('processScanner');
+    showLoading(processBtn);
+    
+    const saleData = {
+        metodo_pago: 'efectivo', // Default payment method
+        detalles: cart.map(item => ({
+            producto_id: item.producto_id,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_unitario
+        }))
+    };
+    
+    try {
+        const sale = await api.createSale(saleData);
+        
+        // Show success modal
+        document.getElementById('saleId').textContent = sale.id;
+        document.getElementById('saleTotal').textContent = formatCurrency(sale.total);
+        
+        // Generate receipt
+        generateReceipt(sale);
+        
+        saleSuccessModal.show();
+        
+        // Reset cart and reload products (to update stock)
+        cart = [];
+        updateCartDisplay();
+        await loadProducts();
+        
+    } catch (error) {
+        console.error('Error processing sale:', error);
+        showAlert('Error procesando la venta: ' + error.message, 'danger');
+    } finally {
+        hideLoading(processBtn, '<i class="fas fa-credit-card me-2"></i>Procesar Venta');
+    }
+}
+
+function generateReceipt(sale) {
+    const customerName = document.getElementById('customerName').value || 'Cliente General';
+    const now = new Date();
+    
+    const receiptHTML = `
+        <div class="receipt mt-3 p-3 bg-light rounded">
+            <div class="text-center mb-3">
+                <h6><strong>POS XYZ System</strong></h6>
+                <small class="text-muted">Recibo de Venta</small>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-6"><small>Cliente:</small></div>
+                <div class="col-6"><small>${customerName}</small></div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-6"><small>Fecha:</small></div>
+                <div class="col-6"><small>${formatDate(now.toISOString())}</small></div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6"><small>Vendedor:</small></div>
+                <div class="col-6"><small>${currentUser.email}</small></div>
+            </div>
+            
+            <hr>
+            
+            ${cart.map(item => `
+                <div class="row mb-1">
+                    <div class="col-7"><small>${item.producto.nombre}</small></div>
+                    <div class="col-2 text-center"><small>${item.cantidad}</small></div>
+                    <div class="col-3 text-end"><small>${formatCurrency(item.precio_unitario * item.cantidad)}</small></div>
+                </div>
+            `).join('')}
+            
+            <hr>
+            
+            <div class="row">
+                <div class="col-8"><strong>TOTAL:</strong></div>
+                <div class="col-4 text-end"><strong>${formatCurrency(sale.total)}</strong></div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('saleReceiptContent').innerHTML = receiptHTML;
+}
+
+function printReceipt() {
+    const printContent = document.getElementById('saleReceiptContent').innerHTML;
+    const printWindow = window.open('', '', 'height=600,width=800');
+    
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Recibo de Venta</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .receipt { max-width: 300px; margin: 0 auto; }
+                    hr { border: 1px solid #000; }
+                </style>
+            </head>
+            <body>
+                ${printContent}
+            </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+}
+
+function startNewSale() {
+    document.getElementById('customerName').value = '';
+    cart = [];
+    updateCartDisplay();
+}
+</script>
+{% endblock %}

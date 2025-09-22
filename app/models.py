@@ -38,8 +38,9 @@ class Venta(Base):
     __tablename__ = "ventas"
     id = Column(Integer, primary_key=True, index=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
-    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     total = Column(Numeric(12,2), nullable=False)
+    metodo_pago = Column(String(50), nullable=False, default="efectivo")
 
     usuario = relationship("Usuario", back_populates="ventas")
     items = relationship("DetalleVenta", back_populates="venta", cascade="all, delete-orphan")

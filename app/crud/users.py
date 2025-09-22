@@ -22,6 +22,24 @@ def get_user(db: Session, user_id: int):
 def list_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Usuario).offset(skip).limit(limit).all()
 
+def update_user(db: Session, user_id: int, user: schemas.UsuarioUpdate):
+    db_user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+    if not db_user:
+        return None
+    
+    update_data = user.model_dump(exclude_unset=True)
+    
+    # Hash password if provided
+    if 'password' in update_data:
+        update_data['password_hash'] = hash_password(update_data.pop('password'))
+    
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
 def delete_user(db: Session, user_id: int):  
     user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()  
     if user:  

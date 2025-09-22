@@ -21,8 +21,9 @@ CREATE TABLE productos (
 CREATE TABLE ventas (
     id SERIAL PRIMARY KEY,
     usuario_id INT NOT NULL REFERENCES usuarios(id),
-    fecha TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    total NUMERIC(12,2) NOT NULL
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    total NUMERIC(12,2) NOT NULL,
+    metodo_pago VARCHAR(50) NOT NULL DEFAULT 'efectivo'
 );
 
 CREATE TABLE detalle_ventas (

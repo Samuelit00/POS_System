@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Ventas - POS XYZ System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">
+                <i class="fas fa-file-invoice-dollar me-2"></i>Historial de Ventas
+            </h1>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <input type="date" class="form-control" id="fechaInicio" placeholder="Fecha inicio">
+    </div>
+    <div class="col-md-3">
+        <input type="date" class="form-control" id="fechaFin" placeholder="Fecha fin">
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="vendedorFilter">
+            <option value="">Todos los vendedores</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-primary w-100" onclick="filterSales()">
+            <i class="fas fa-search me-2"></i>Buscar
+        </button>
+    </div>
+</div>
+
+<!-- Sales Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-list me-2"></i>Ventas Registradas
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Vendedor</th>
+                        <th>Total</th>
+                        <th>Items</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="salesTable">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando ventas...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Sale Detail Modal -->
+<div class="modal fade" id="saleDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-receipt me-2"></i>Detalle de Venta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="saleDetailContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Cargando detalles...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sales = [];
+let vendors = [];
+let saleDetailModal;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    saleDetailModal = new bootstrap.Modal(document.getElementById('saleDetailModal'));
+    
+    // Try to load vendors but don't let it block sales loading
+    try {
+        await loadVendors();
+    } catch (e) {
+        console.warn('Vendors loading failed, continuing with sales:', e.message);
+    }
+    
+    await loadSales();
+});
+
+async function loadVendors() {
+    try {
+        const users = await api.getUsers();
+        vendors = users.filter(user => user.rol === 'vendedor' || user.rol === 'admin');
+        
+        const select = document.getElementById('vendedorFilter');
+        select.innerHTML = '<option value="">Todos los vendedores</option>' +
+            vendors.map(vendor => `<option value="${vendor.id}">${vendor.nombre}</option>`).join('');
+            
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+        // Don't stop execution, continue with sales loading
+    }
+}
+
+async function loadSales() {
+    try {
+        sales = await api.getSales();
+        renderSalesTable();
+    } catch (error) {
+        console.error('Error loading sales:', error);
+        showAlert('Error cargando ventas', 'danger');
+        document.getElementById('salesTable').innerHTML = 
+            '<tr><td colspan="6" class="text-center text-danger">Error cargando ventas</td></tr>';
+    }
+}
+
+async function filterSales() {
+    const fechaInicio = document.getElementById('fechaInicio').value;
+    const fechaFin = document.getElementById('fechaFin').value;
+    const vendedorId = document.getElementById('vendedorFilter').value;
+    
+    const params = {};
+    if (fechaInicio) params.fecha_inicio = fechaInicio;
+    if (fechaFin) params.fecha_fin = fechaFin;
+    if (vendedorId) params.usuario_id = vendedorId;
+    
+    try {
+        sales = await api.getSales(params);
+        renderSalesTable();
+    } catch (error) {
+        console.error('Error filtering sales:', error);
+        showAlert('Error filtrando ventas', 'danger');
+    }
+}
+
+function renderSalesTable() {
+    const tbody = document.getElementById('salesTable');
+    
+    if (sales.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No se encontraron ventas</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = sales.map(sale => {
+        return `
+        <tr>
+            <td><strong>#${sale.id}</strong></td>
+            <td style="color: #212529 !important; font-weight: 600;">${formatDate(sale.fecha_creacion)}</td>
+            <td style="color: #212529 !important; font-weight: 600;">${sale.usuario_nombre || 'N/A'}</td>
+            <td class="text-success"><strong>${formatCurrency(sale.total)}</strong></td>
+            <td><span class="badge bg-secondary">${sale.detalles?.length || 0} items</span></td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm" onclick="showSaleDetail(${sale.id})">
+                    <i class="fas fa-eye"></i> Ver Detalle
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function showSaleDetail(saleId) {
+    saleDetailModal.show();
+    
+    try {
+        const sale = await api.getSale(saleId);
+        
+        const content = `
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Número de Venta:</strong> #${sale.id}
+                </div>
+                <div class="col-md-6">
+                    <strong>Fecha:</strong> ${formatDate(sale.fecha_creacion)}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Vendedor:</strong> ${sale.usuario_nombre || 'N/A'}
+                </div>
+                <div class="col-md-6">
+                    <strong>Total:</strong> ${formatCurrency(sale.total)}
+                </div>
+            </div>
+            
+            <h6 class="mt-4 mb-3">Productos Vendidos:</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio Unit.</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sale.detalles.map(item => `
+                            <tr>
+                                <td>${item.producto_nombre}</td>
+                                <td>${formatCurrency(item.precio_unitario)}</td>
+                                <td>${item.cantidad}</td>
+                                <td class="text-success">${formatCurrency(item.subtotal)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-success">
+                            <td colspan="3"><strong>TOTAL:</strong></td>
+                            <td><strong>${formatCurrency(sale.total)}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('saleDetailContent').innerHTML = content;
+        
+    } catch (error) {
+        console.error('Error loading sale detail:', error);
+        document.getElementById('saleDetailContent').innerHTML = 
+            '<div class="alert alert-danger">Error cargando detalles de la venta</div>';
+    }
+}
+</script>
+{% endblock %}

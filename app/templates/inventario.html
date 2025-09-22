@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Inventario - POS XYZ System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">
+                <i class="fas fa-warehouse me-2"></i>Gestión de Inventario
+            </h1>
+            <div class="btn-group">
+                <button class="btn btn-outline-warning" onclick="showLowStockOnly()">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Stock Bajo
+                </button>
+                <button class="btn btn-outline-success" onclick="showAllProducts()">
+                    <i class="fas fa-list me-2"></i>Todos los Productos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inventory Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3 id="totalProducts">0</h3>
+                <p class="mb-0">Total Productos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3 id="inStock">0</h3>
+                <p class="mb-0">Con Stock</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3 id="lowStock">0</h3>
+                <p class="mb-0">Stock Bajo</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h3 id="outOfStock">0</h3>
+                <p class="mb-0">Sin Stock</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inventory Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>Inventario de Productos
+            </h5>
+            <div class="input-group" style="max-width: 300px;">
+                <input type="text" class="form-control" id="searchInput" placeholder="Buscar productos...">
+                <button class="btn btn-outline-secondary" onclick="clearSearch()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Producto</th>
+                        <th>Descripción</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTable">
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando inventario...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Update Stock Modal -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Actualizar Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockForm">
+                    <input type="hidden" id="stockProductId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Producto:</label>
+                        <p id="stockProductName" class="form-control-plaintext fw-bold"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Stock Actual:</label>
+                        <p id="currentStock" class="form-control-plaintext text-success"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newStock" class="form-label">Nuevo Stock *</label>
+                        <input type="number" class="form-control" id="newStock" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="updateStock()">
+                    <i class="fas fa-save me-2"></i>Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let products = [];
+let filteredProducts = [];
+let showLowStockFilter = false;
+let updateStockModal;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    updateStockModal = new bootstrap.Modal(document.getElementById('updateStockModal'));
+    await loadInventory();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    const searchInput = document.getElementById('searchInput');
+    const debouncedSearch = debounce(() => {
+        filterProducts();
+    }, 300);
+    
+    searchInput.addEventListener('input', debouncedSearch);
+}
+
+async function loadInventory() {
+    try {
+        products = await api.getProducts();
+        updateStats();
+        filterProducts();
+    } catch (error) {
+        console.error('Error loading inventory:', error);
+        showAlert('Error cargando inventario', 'danger');
+        document.getElementById('inventoryTable').innerHTML = 
+            '<tr><td colspan="7" class="text-center text-danger">Error cargando inventario</td></tr>';
+    }
+}
+
+function updateStats() {
+    const totalProducts = products.length;
+    const inStock = products.filter(p => p.stock > 0).length;
+    const lowStock = products.filter(p => p.stock > 0 && p.stock < 10).length;
+    const outOfStock = products.filter(p => p.stock === 0).length;
+    
+    document.getElementById('totalProducts').textContent = totalProducts;
+    document.getElementById('inStock').textContent = inStock;
+    document.getElementById('lowStock').textContent = lowStock;
+    document.getElementById('outOfStock').textContent = outOfStock;
+}
+
+function filterProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    filteredProducts = products.filter(product => {
+        const matchesSearch = product.nombre.toLowerCase().includes(searchTerm) ||
+                            (product.descripcion && product.descripcion.toLowerCase().includes(searchTerm));
+        
+        const matchesFilter = !showLowStockFilter || (product.stock > 0 && product.stock < 10);
+        
+        return matchesSearch && matchesFilter;
+    });
+    
+    renderInventoryTable();
+}
+
+function renderInventoryTable() {
+    const tbody = document.getElementById('inventoryTable');
+    
+    if (filteredProducts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No se encontraron productos</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = filteredProducts.map(product => `
+        <tr class="${getRowClass(product.stock)}">
+            <td>#${product.id}</td>
+            <td><strong>${product.nombre}</strong></td>
+            <td>${product.descripcion || '-'}</td>
+            <td>${formatCurrency(product.precio)}</td>
+            <td><span class="badge ${getStockBadgeClass(product.stock)}">${product.stock}</span></td>
+            <td>${getStockStatus(product.stock)}</td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm" onclick="showUpdateStockModal(${product.id})">
+                    <i class="fas fa-edit"></i> Actualizar Stock
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getRowClass(stock) {
+    if (stock === 0) return 'table-danger';
+    if (stock < 10) return 'table-warning';
+    return '';
+}
+
+function getStockBadgeClass(stock) {
+    if (stock === 0) return 'bg-danger';
+    if (stock < 10) return 'bg-warning text-dark';
+    return 'bg-success';
+}
+
+function getStockStatus(stock) {
+    if (stock === 0) return '<span class="text-danger"><i class="fas fa-times-circle"></i> Sin Stock</span>';
+    if (stock < 10) return '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Stock Bajo</span>';
+    return '<span class="text-success"><i class="fas fa-check-circle"></i> Disponible</span>';
+}
+
+function showLowStockOnly() {
+    showLowStockFilter = true;
+    filterProducts();
+}
+
+function showAllProducts() {
+    showLowStockFilter = false;
+    filterProducts();
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    filterProducts();
+}
+
+function showUpdateStockModal(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    document.getElementById('stockProductId').value = product.id;
+    document.getElementById('stockProductName').textContent = product.nombre;
+    document.getElementById('currentStock').textContent = product.stock;
+    document.getElementById('newStock').value = product.stock;
+    
+    updateStockModal.show();
+}
+
+async function updateStock() {
+    const form = document.getElementById('stockForm');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const productId = document.getElementById('stockProductId').value;
+    const newStock = parseInt(document.getElementById('newStock').value);
+    
+    try {
+        await api.updateProduct(productId, { stock: newStock });
+        showAlert('Stock actualizado correctamente', 'success');
+        updateStockModal.hide();
+        await loadInventory();
+    } catch (error) {
+        console.error('Error updating stock:', error);
+        showAlert('Error actualizando stock', 'danger');
+    }
+}
+</script>
+{% endblock %}

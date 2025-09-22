@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios - POS XYZ System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">
+                <i class="fas fa-users me-2"></i>Gestión de Usuarios
+            </h1>
+            <button class="btn btn-primary" onclick="showUserModal()">
+                <i class="fas fa-user-plus me-2"></i>Nuevo Usuario
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-list me-2"></i>Usuarios del Sistema
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Fecha Creación</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando usuarios...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalTitle">
+                    <i class="fas fa-user-plus me-2"></i>Nuevo Usuario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="mb-3">
+                        <label for="userName" class="form-label">Nombre Completo *</label>
+                        <input type="text" class="form-control" id="userName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="userEmail" class="form-label">Correo Electrónico *</label>
+                        <input type="email" class="form-control" id="userEmail" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="userPassword" class="form-label">Contraseña *</label>
+                        <input type="password" class="form-control" id="userPassword" required>
+                        <div class="form-text">Mínimo 6 caracteres</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="userRole" class="form-label">Rol *</label>
+                        <select class="form-select" id="userRole" required>
+                            <option value="">Seleccionar rol...</option>
+                            <option value="admin">Administrador</option>
+                            <option value="vendedor">Vendedor</option>
+                        </select>
+                        <div class="form-text">
+                            <small>
+                                <strong>Admin:</strong> Acceso completo al sistema<br>
+                                <strong>Vendedor:</strong> Puede realizar ventas y consultar productos
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveUserBtn" onclick="saveUser()">
+                    <i class="fas fa-save me-2"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let users = [];
+let userModal;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    userModal = new bootstrap.Modal(document.getElementById('userModal'));
+    await loadUsers();
+});
+
+async function loadUsers() {
+    try {
+        users = await api.getUsers();
+        renderUsersTable();
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showAlert('Error cargando usuarios', 'danger');
+        document.getElementById('usersTable').innerHTML = 
+            '<tr><td colspan="6" class="text-center text-danger">Error cargando usuarios</td></tr>';
+    }
+}
+
+function renderUsersTable() {
+    const tbody = document.getElementById('usersTable');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay usuarios registrados</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        return `
+        <tr>
+            <td><strong>#${user.id}</strong></td>
+            <td style="color: #212529 !important; font-weight: 600;">${user.nombre || 'Sin nombre'}</td>
+            <td style="color: #212529 !important; font-weight: 600;">${user.email || 'Sin email'}</td>
+            <td>
+                <span class="badge ${getRoleBadgeClass(user.rol)}">
+                    ${getRoleDisplayName(user.rol)}
+                </span>
+            </td>
+            <td style="color: #212529 !important; font-weight: 600;">${user.creado_en ? formatShortDate(user.creado_en) : 'N/A'}</td>
+            <td>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteUser(${user.id})" 
+                        ${currentUser && currentUser.id == user.id ? 'disabled' : ''}>
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function getRoleBadgeClass(rol) {
+    switch (rol) {
+        case 'admin':
+            return 'bg-primary';
+        case 'vendedor':
+            return 'bg-success';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+function getRoleDisplayName(rol) {
+    switch (rol) {
+        case 'admin':
+            return 'Administrador';
+        case 'vendedor':
+            return 'Vendedor';
+        default:
+            return rol;
+    }
+}
+
+function showUserModal() {
+    const form = document.getElementById('userForm');
+    form.reset();
+    
+    document.getElementById('userModalTitle').innerHTML = 
+        '<i class="fas fa-user-plus me-2"></i>Nuevo Usuario';
+    
+    userModal.show();
+}
+
+async function saveUser() {
+    const form = document.getElementById('userForm');
+    const saveBtn = document.getElementById('saveUserBtn');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const password = document.getElementById('userPassword').value;
+    if (password.length < 6) {
+        showAlert('La contraseña debe tener al menos 6 caracteres', 'warning');
+        return;
+    }
+    
+    const userData = {
+        nombre: document.getElementById('userName').value,
+        email: document.getElementById('userEmail').value,
+        password: password,
+        rol: document.getElementById('userRole').value
+    };
+    
+    showLoading(saveBtn);
+    
+    try {
+        await api.createUser(userData);
+        showAlert('Usuario creado correctamente', 'success');
+        userModal.hide();
+        await loadUsers();
+        
+    } catch (error) {
+        console.error('Error saving user:', error);
+        if (error.message.includes('Email already registered')) {
+            showAlert('El correo electrónico ya está registrado', 'danger');
+        } else {
+            showAlert('Error creando usuario', 'danger');
+        }
+    } finally {
+        hideLoading(saveBtn, '<i class="fas fa-save me-2"></i>Guardar');
+    }
+}
+
+async function deleteUser(userId) {
+    // Prevent self-deletion
+    if (currentUser && currentUser.id == userId) {
+        showAlert('No puedes eliminar tu propio usuario', 'warning');
+        return;
+    }
+    
+    const user = users.find(u => u.id === userId);
+    if (!confirmDelete(`¿Estás seguro de que deseas eliminar al usuario "${user.nombre}"?`)) {
+        return;
+    }
+    
+    try {
+        await api.deleteUser(userId);
+        showAlert('Usuario eliminado correctamente', 'success');
+        await loadUsers();
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        showAlert('Error eliminando usuario', 'danger');
+    }
+}
+</script>
+{% endblock %}
