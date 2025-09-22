@@ -175,12 +175,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadReportData() {
     try {
+        console.log('Cargando datos de reportes...');
+        
         // Load metrics and sales data
         const [metrics, sales, products] = await Promise.all([
             api.getDashboardMetrics(),
             api.getSales(),
             api.getProducts()
         ]);
+        
+        console.log('Datos cargados:', { metrics, sales: sales.length, products: products.length });
         
         reportData = { metrics, sales, products };
         
@@ -191,8 +195,13 @@ async function loadReportData() {
         
     } catch (error) {
         console.error('Error loading report data:', error);
-        showAlert('Error cargando datos del reporte', 'danger');
+        showAlert('Error cargando datos del reporte: ' + error.message, 'danger');
     }
+}
+
+// Helper function to format currency
+function formatCurrency(amount) {
+    return `$${Number(amount).toFixed(2)}`;
 }
 
 function updateSummaryCards() {
@@ -203,7 +212,7 @@ function updateSummaryCards() {
     const ingresosTotales = sales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
     const promedioVenta = totalVentas > 0 ? ingresosTotales / totalVentas : 0;
     const productosVendidos = sales.reduce((sum, sale) => 
-        sum + (sale.items ? sale.items.reduce((itemSum, item) => itemSum + item.cantidad, 0) : 0), 0);
+        sum + (sale.detalles ? sale.detalles.reduce((itemSum, item) => itemSum + item.cantidad, 0) : 0), 0);
     
     document.getElementById('totalVentas').textContent = totalVentas;
     document.getElementById('ingresosTotales').textContent = formatCurrency(ingresosTotales);
@@ -268,7 +277,7 @@ function createSalesByVendorChart() {
     // Group sales by vendor
     const salesByVendor = {};
     sales.forEach(sale => {
-        const vendorName = sale.usuario.nombre;
+        const vendorName = sale.usuario_nombre || 'Usuario desconocido';
         if (!salesByVendor[vendorName]) {
             salesByVendor[vendorName] = 0;
         }
@@ -324,8 +333,8 @@ function updateProductPerformanceTable() {
     
     // Add sales data
     sales.forEach(sale => {
-        if (sale.items) {
-            sale.items.forEach(item => {
+        if (sale.detalles) {
+            sale.detalles.forEach(item => {
                 if (productStats[item.producto_id]) {
                     productStats[item.producto_id].cantidadVendida += item.cantidad;
                     productStats[item.producto_id].ingresos += parseFloat(item.subtotal);
