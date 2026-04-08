@@ -26,6 +26,16 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="app/templates")
 
+def render_template(request: Request, template_name: str, context: dict | None = None):
+    # Compatibility shim: Starlette changed TemplateResponse signature across versions.
+    ctx = {"request": request}
+    if context:
+        ctx.update(context)
+    try:
+        return templates.TemplateResponse(request=request, name=template_name, context=ctx)
+    except TypeError:
+        return templates.TemplateResponse(template_name, ctx)
+
 # Include API routers with /api prefix
 app.include_router(users.router, prefix="/api")
 app.include_router(products.router, prefix="/api")
@@ -34,35 +44,35 @@ app.include_router(sales.router, prefix="/api")
 # Template Routes
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return render_template(request, "dashboard.html")
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return render_template(request, "login.html")
 
 @app.get("/productos", response_class=HTMLResponse)
 async def productos_page(request: Request):
-    return templates.TemplateResponse("productos.html", {"request": request})
+    return render_template(request, "productos.html")
 
 @app.get("/pos", response_class=HTMLResponse)
 async def pos_page(request: Request):
-    return templates.TemplateResponse("pos.html", {"request": request})
+    return render_template(request, "pos.html")
 
 @app.get("/inventario", response_class=HTMLResponse)
 async def inventario_page(request: Request):
-    return templates.TemplateResponse("inventario.html", {"request": request})
+    return render_template(request, "inventario.html")
 
 @app.get("/ventas", response_class=HTMLResponse)
 async def ventas_page(request: Request):
-    return templates.TemplateResponse("ventas.html", {"request": request})
+    return render_template(request, "ventas.html")
 
 @app.get("/usuarios", response_class=HTMLResponse)
 async def usuarios_page(request: Request):
-    return templates.TemplateResponse("usuarios.html", {"request": request})
+    return render_template(request, "usuarios.html")
 
 @app.get("/reportes", response_class=HTMLResponse)
 async def reportes_page(request: Request):
-    return templates.TemplateResponse("reportes.html", {"request": request})
+    return render_template(request, "reportes.html")
 
 # Additional API endpoints for frontend
 @app.get('/api/dashboard/metrics', response_model=schemas.DashboardMetrics)
