@@ -34,36 +34,67 @@ app.include_router(sales.router, prefix="/api")
 # Template Routes
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={"request": request}
+    )
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"request": request}
+    )
 
 @app.get("/productos", response_class=HTMLResponse)
 async def productos_page(request: Request):
-    return templates.TemplateResponse("productos.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="productos.html",
+        context={"request": request}
+    )
 
 @app.get("/pos", response_class=HTMLResponse)
 async def pos_page(request: Request):
-    return templates.TemplateResponse("pos.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="pos.html",
+        context={"request": request}
+    )
 
 @app.get("/inventario", response_class=HTMLResponse)
 async def inventario_page(request: Request):
-    return templates.TemplateResponse("inventario.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="inventario.html",
+        context={"request": request}
+    )
 
 @app.get("/ventas", response_class=HTMLResponse)
 async def ventas_page(request: Request):
-    return templates.TemplateResponse("ventas.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="ventas.html",
+        context={"request": request}
+    )
 
 @app.get("/usuarios", response_class=HTMLResponse)
 async def usuarios_page(request: Request):
-    return templates.TemplateResponse("usuarios.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="usuarios.html",
+        context={"request": request}
+    )
 
 @app.get("/reportes", response_class=HTMLResponse)
 async def reportes_page(request: Request):
-    return templates.TemplateResponse("reportes.html", {"request": request})
-
+    return templates.TemplateResponse(
+        request=request,
+        name="reportes.html",
+        context={"request": request}
+    )
 # Additional API endpoints for frontend
 @app.get('/api/dashboard/metrics', response_model=schemas.DashboardMetrics)
 def get_dashboard_metrics(db: Session = Depends(get_db)):
