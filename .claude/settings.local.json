@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force \"D:\\\\OneDrive - PUJ Cali\\\\7\\) Semestre\\\\Procesos y Diseño de software\\\\POS_MiniProyecto\\\\POS_System\\\\pos_tests\\\\tests\")",
+      "Bash(Out-Null)"
+    ]
+  }
+}

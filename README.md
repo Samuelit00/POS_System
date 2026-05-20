@@ -84,10 +84,16 @@ CREATE DATABASE pos_db;
 -- 2. Crear un usuario exclusivo y su contraseña
 CREATE USER pos_user WITH PASSWORD 'pos_password';
 
--- 3. Dar privilegios del dueño al nuevo usuario
+-- 3. Dar privilegios de la BD al nuevo usuario
 GRANT ALL PRIVILEGES ON DATABASE pos_db TO pos_user;
 
--- 4. Salir de psql
+-- 4. Conectarse a la base de datos recién creada
+\c pos_db
+
+-- 5. Dar permisos sobre el esquema público (Requerido en PostgreSQL 15+)
+GRANT ALL ON SCHEMA public TO pos_user;
+
+-- 6. Salir de psql
 \q
 ```
 

@@ -1,0 +1,312 @@
+PLAN DE PRUEBAS - SISTEMA POS XYZ
+
+1. INFORMACION GENERAL
+
+Proyecto: POS XYZ (FastAPI + PostgreSQL + frontend web)
+Version evaluada: Estado actual del repositorio
+Autor del plan: Samuel (equipo de proyecto)
+Fecha: 2026-03-17
+Base de referencia: buenas practicas de plan de pruebas (alcance, DoR/DoD, estrategia, entregables, dependencias, entorno, riesgos, roles)
+
+2. OBJETIVOS DEL PLAN
+
+2.1 Objetivo general
+
+Definir y ejecutar un proceso de pruebas funcionales para validar que el sistema POS XYZ cumpla con los requerimientos principales de autenticacion, gestion de usuarios, gestion de productos, ventas, inventario y dashboard, asegurando un comportamiento correcto y confiable para su uso academico.
+
+2.2 Objetivos especificos
+
+- Verificar el flujo de autenticacion (inicio y control de sesion) en condiciones validas e invalidas.
+- Validar operaciones CRUD basicas de usuarios y productos desde API/UI.
+- Comprobar que el registro de ventas actualiza correctamente el inventario.
+- Confirmar reglas de negocio criticas, como bloqueo por stock insuficiente y validaciones de campos.
+- Evaluar que las metricas del dashboard reflejen los datos operativos esperados.
+- Detectar y documentar defectos por severidad para su correccion y seguimiento.
+- Generar evidencia de ejecucion (casos, resultados y reporte final) para sustentar la calidad alcanzada.
+
+3. ALCANCE
+
+3.1 En alcance (que SI se probara)
+
+- Login y control de sesion por token JWT.
+- Acceso a paginas principales del sistema autenticado.
+- CRUD basico de usuarios.
+- CRUD basico de productos.
+- Flujo de ventas con validacion de stock.
+- Actualizacion de inventario despues de una venta.
+- Consulta de ventas por listado y detalle.
+- Carga de metricas del dashboard.
+- Validaciones basicas de datos en API (campos obligatorios y reglas minimas).
+
+3.2 Fuera de alcance (que NO se probara en esta fase)
+
+- Pruebas de carga masiva y stress a nivel productivo.
+- Pruebas de seguridad avanzadas tipo pentesting.
+- Compatibilidad en multiples navegadores/OS en profundidad.
+- Migraciones de base de datos y despliegue cloud.
+- Pruebas de accesibilidad formal bajo normas WCAG completas.
+
+4. CRITERIOS DE ENTRADA Y SALIDA (DoR / DoD)
+
+4.1 DoR (Definition of Ready) - Criterios de entrada
+
+Antes de ejecutar pruebas, debe cumplirse:
+
+- Repositorio clonado y dependencias instaladas.
+- Entorno virtual activo y variables en archivo .env configuradas.
+- Base de datos PostgreSQL disponible y conectada.
+- Aplicacion inicia sin errores bloqueantes (uvicorn levanta correctamente).
+- Usuario admin disponible para pruebas funcionales.
+- Datos minimos de prueba cargados (al menos 3 productos y 1 usuario vendedor).
+- Casos de prueba revisados y entendidos por quien ejecuta.
+
+4.2 DoD (Definition of Done) - Criterios de salida
+
+Las pruebas de una iteracion se consideran completas cuando:
+
+- 100% de casos criticos ejecutados (login, venta, stock, dashboard).
+- Al menos 90% de casos planificados ejecutados en total.
+- 0 defectos criticos abiertos.
+- Defectos altos con workaround documentado o corregidos.
+- Evidencias guardadas (resultado de casos y hallazgos).
+- Informe de cierre de pruebas emitido.
+
+5. ESTRATEGIA DE PRUEBAS
+
+Se aplicara una estrategia mixta, priorizando simplicidad y utilidad para aprendizaje:
+
+- Pruebas manuales funcionales end-to-end desde UI.
+- Pruebas de API basicas (Swagger/cliente HTTP) para validar codigos y respuestas.
+- Pruebas de regresion ligera sobre flujos criticos luego de cada cambio.
+- Pruebas exploratorias cortas para detectar errores no previstos.
+
+5.1 Niveles/tipos de prueba
+
+- Smoke test: validar que el sistema arranca y responde en rutas clave.
+- Funcionales: validar reglas de negocio por modulo.
+- Integracion: validar que frontend, API y DB trabajan en conjunto.
+- Regresion: reejecutar casos criticos despues de cambios.
+
+5.2 Priorizacion
+
+- Prioridad Alta: login, crear venta, descuento de stock, consulta de ventas.
+- Prioridad Media: CRUD de usuarios y productos, metricas dashboard.
+- Prioridad Baja: detalles visuales menores en UI.
+
+6. ENTREGABLES
+
+- Plan de pruebas.
+- Matriz de casos de prueba.
+- Evidencias de ejecucion (capturas y/o logs breves).
+- Registro de defectos (id, severidad, estado, descripcion).
+- Reporte de avance por ciclo.
+- Reporte final de pruebas.
+
+7. DEPENDENCIAS
+
+- Python 3.8+.
+- PostgreSQL 12+.
+- Librerias del archivo requirements.txt.
+- Variables de entorno correctas (DATABASE_URL, SECRET_KEY, etc.).
+- Datos base validos para usuarios/productos/ventas.
+- Disponibilidad local del servidor FastAPI.
+
+8. ENTORNO DE PRUEBAS
+
+8.1 Ambiente
+
+- Tipo: Local (desarrollo)
+- Backend: FastAPI (uvicorn)
+- Base de datos: PostgreSQL local
+- Frontend: Templates + JS estatico
+
+8.2 Configuracion sugerida
+
+- URL aplicacion: http://127.0.0.1:8000
+- API docs: http://127.0.0.1:8000/docs
+- Health check: /health
+- Usuario inicial: admin@example.com
+
+8.3 Datos de prueba minimos
+
+- Usuario admin (existente)
+- 1 usuario vendedor
+- 3 productos con stock mayor a 0
+- 1 producto con stock bajo (menor a 10)
+
+9. GESTION DE RIESGOS
+
+Riesgo: Fallo de conexion a DB
+Impacto: Alto
+Probabilidad: Media
+Mitigacion: Verificar .env, credenciales y servicio PostgreSQL antes de pruebas
+
+Riesgo: Datos de prueba insuficientes
+Impacto: Medio
+Probabilidad: Alta
+Mitigacion: Definir dataset minimo y checklist previo
+
+Riesgo: Defectos en flujo de venta/stock
+Impacto: Alto
+Probabilidad: Media
+Mitigacion: Priorizar pruebas de venta e inventario al inicio
+
+Riesgo: Cambios de codigo durante pruebas
+Impacto: Medio
+Probabilidad: Media
+Mitigacion: Congelar version por ciclo corto y repetir regresion critica
+
+Riesgo: Falta de tiempo academico
+Impacto: Alto
+Probabilidad: Alta
+Mitigacion: Priorizar casos criticos y reportar cobertura real
+
+Riesgo: Conocimiento limitado en QA
+Impacto: Medio
+Probabilidad: Alta
+Mitigacion: Usar casos claros, plantillas simples y ejecucion guiada
+
+10. ROLES Y RESPONSABILIDADES
+
+- QA Lead (academico): Definir plan, priorizar pruebas, consolidar reporte final.
+- Tester funcional: Ejecutar casos, registrar evidencias y defectos.
+- Desarrollador backend: Corregir errores API/logica y apoyar analisis tecnico.
+- Desarrollador frontend: Corregir errores UI/flujo de usuario.
+- Revisor (profesora/tutor): Revisar calidad del plan y resultados reportados.
+
+11. CASOS DE PRUEBA BASE (RESUMEN)
+
+CP-01 - Login exitoso
+Precondicion: Usuario admin existe
+Paso principal: Ingresar email y password validos
+Resultado esperado: Acceso al dashboard y token guardado
+Prioridad: Alta
+
+CP-02 - Login fallido
+Precondicion: Usuario existe
+Paso principal: Ingresar password invalido
+Resultado esperado: Mensaje de credenciales invalidas
+Prioridad: Alta
+
+CP-03 - Bloqueo por no autenticado
+Precondicion: Sin token
+Paso principal: Abrir ruta protegida
+Resultado esperado: Redireccion a /login
+Prioridad: Alta
+
+CP-04 - Crear producto valido
+Precondicion: Sesion activa
+Paso principal: Crear producto con precio mayor a 0 y stock mayor o igual a 0
+Resultado esperado: Producto creado y visible en listado
+Prioridad: Media
+
+CP-05 - Crear producto invalido
+Precondicion: Sesion activa
+Paso principal: Enviar precio menor o igual a 0
+Resultado esperado: API/UI rechaza solicitud
+Prioridad: Alta
+
+CP-06 - Crear usuario duplicado
+Precondicion: Email ya registrado
+Paso principal: Intentar crear usuario con mismo email
+Resultado esperado: Error por email registrado
+Prioridad: Media
+
+CP-07 - Venta con stock suficiente
+Precondicion: Producto con stock suficiente
+Paso principal: Registrar venta
+Resultado esperado: Venta creada y stock disminuye
+Prioridad: Alta
+
+CP-08 - Venta con stock insuficiente
+Precondicion: Producto con stock insuficiente
+Paso principal: Registrar venta excediendo stock
+Resultado esperado: Error de stock insuficiente
+Prioridad: Alta
+
+CP-09 - Listar ventas por fecha
+Precondicion: Hay ventas registradas
+Paso principal: Consultar ventas con filtros
+Resultado esperado: Retorna ventas dentro del rango
+Prioridad: Media
+
+CP-10 - Ver metricas dashboard
+Precondicion: Datos cargados
+Paso principal: Abrir dashboard
+Resultado esperado: Muestra ventas hoy, ingresos, stock bajo, usuarios
+Prioridad: Media
+
+CP-11 - Health check
+Precondicion: Servidor arriba
+Paso principal: GET /health
+Resultado esperado: Respuesta status ok
+Prioridad: Alta
+
+CP-12 - Eliminar producto
+Precondicion: Producto existe
+Paso principal: Eliminar producto desde UI/API
+Resultado esperado: Producto removido del listado
+Prioridad: Baja
+
+12. FLUJO DE EJECUCION RECOMENDADO
+
+1. Ejecutar smoke: CP-11 y CP-01.
+2. Ejecutar modulo productos: CP-04, CP-05 y CP-12.
+3. Ejecutar modulo usuarios: CP-06.
+4. Ejecutar ventas e inventario: CP-07, CP-08 y CP-09.
+5. Ejecutar dashboard: CP-10.
+6. Repetir CP-01, CP-07 y CP-10 como mini regresion final.
+
+13. CRITERIOS DE SEVERIDAD DE DEFECTOS
+
+- Critico: impide usar flujo principal (ejemplo: no se puede vender).
+- Alto: afecta funcionalidad importante con impacto fuerte.
+- Medio: afecta funcionalidad secundaria con workaround.
+- Bajo: detalle visual o menor, sin bloquear operacion.
+
+14. FORMATO MINIMO DE REPORTE FINAL
+
+- Resumen ejecutivo (1 parrafo)
+- Cobertura ejecutada (casos ejecutados vs planificados)
+- Defectos por severidad
+- Defectos abiertos/cerrados
+- Riesgos remanentes
+- Recomendacion de salida: Aprobado / Aprobado con observaciones / No aprobado
+
+15. NOTAS PARA ITERACIONES FUTURAS
+
+- Agregar pruebas automatizadas de API para login, productos y ventas.
+- Incluir pruebas de rendimiento de endpoint de ventas y dashboard.
+- Mejorar validaciones de esquema para detalles de venta.
+- Definir datos semilla consistentes para pruebas repetibles.
+
+16. FICHA FUNCIONAL - REGISTRO DE PRODUCTO
+
+16.1 F4: Registro de Producto
+
+| Campo | Detalle |
+|---|---|
+| Nombre | Registro de producto |
+| Actor | Usuario en modulo Productos (UI) / Cliente API. Nota: en backend actual no hay validacion de rol ni token en este endpoint. |
+| Endpoint | POST /api/productos/ |
+| Descripcion | El sistema permite crear un nuevo producto desde el modal "Nuevo Producto". Se capturan nombre, descripcion, precio y stock. En UI se aplica validacion HTML5 (required y min=0 en numericos); luego se envia JSON al endpoint. En backend, Pydantic valida reglas de negocio (precio > 0 y stock >= 0). Si pasa validacion, se inserta en DB y se retorna el producto creado. |
+| Entradas | nombre: str (obligatorio), descripcion: str opcional (puede ir null), precio: float obligatorio, stock: int obligatorio. |
+| Validaciones | nombre requerido en formulario; precio obligatorio y mayor a 0 (backend); stock obligatorio y mayor o igual a 0 (backend); descripcion opcional. |
+| Salida exitosa | HTTP 200 con objeto ProductoOut: id, nombre, descripcion, precio, stock. |
+| Salida con error | HTTP 422 cuando precio <= 0, stock < 0 o faltan campos requeridos. |
+| Postcondicion | Producto persistido en tabla productos y visible al recargar listado de productos. |
+| Ejemplo | nombre="Coca Cola 400ml", descripcion="Bebida gaseosa", precio=3500.00, stock=25. Resultado: producto creado con nuevo id. |
+
+17. REGLAS DE NEGOCIO - REGISTRO DE PRODUCTO
+
+| ID | Regla de Negocio |
+|---|---|
+| RN-14 | Si el nombre del producto no se envia, entonces la solicitud se rechaza por campo obligatorio. |
+| RN-15 | Si la descripcion no se envia, entonces el registro del producto continua (descripcion opcional/null). |
+| RN-16 | Si el precio es mayor a 0, entonces el producto puede registrarse; si el precio es 0 o negativo, la solicitud se rechaza. |
+| RN-17 | Si el stock inicial es mayor o igual a 0, entonces el producto puede registrarse; si el stock es negativo, la solicitud se rechaza. |
+| RN-18 | Si faltan precio o stock, entonces no se permite crear el producto por campos obligatorios. |
+| RN-19 | Si el producto pasa validaciones, entonces se inserta en DB y se retorna con id generado. |
+| RN-20 | Si el precio tiene mas de 2 decimales, la base de datos lo almacena en NUMERIC(12,2). |
+| RN-21 | Si se crea producto desde la interfaz web, entonces el listado se actualiza y el nuevo producto debe verse en la tabla. |
+| RN-22 | Actualmente no existe regla de unicidad para nombre de producto; por tanto, se pueden crear productos con nombres repetidos. |
